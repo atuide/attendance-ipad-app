@@ -613,6 +613,7 @@
           <h2 style="margin-right:auto">月次一覧</h2>
           <input id="monthPicker" type="month">
           <button id="csvBtn" class="btn">選択した月をCSV出力</button>
+          <button id="yearCsvBtn" class="btn">選択年度をCSV出力</button>
           <button id="shareBtn" class="btn">メールで送る</button>
         </div>
 
@@ -698,6 +699,7 @@
       backupBtn: document.getElementById("backupBtn"),
       importInput: document.getElementById("importInput"),
       csvBtn: document.getElementById("csvBtn"),
+      yearCsvBtn: document.getElementById("yearCsvBtn"),
       shareBtn: document.getElementById("shareBtn"),
       resetMembersBtn: document.getElementById("resetMembersBtn"),
       emailInput: document.getElementById("emailInput"),
@@ -743,6 +745,7 @@
       els.backupBtn.addEventListener("click", exportBackup);
       els.importInput.addEventListener("change", importBackup);
       els.csvBtn.addEventListener("click", exportMonthlyCsv);
+      els.yearCsvBtn.addEventListener("click", exportFiscalYearCsv);
       els.shareBtn.addEventListener("click", shareMonthlyXlsx);
       els.resetMembersBtn.addEventListener("click", resetMembers);
       els.monthPicker.addEventListener("change", () => {
@@ -1086,9 +1089,42 @@
     function exportMonthlyCsv() {
       const [year, month] = els.monthPicker.value.split("-").map(Number);
       const lines = [
-        "date,first_in_name,first_in_time,last_out_name,last_out_time"
+        "date,year_month,first_in_name,first_in_time,last_out_name,last_out_time"
       ];
 
+      appendCsvMonthLines(lines, year, month);
+
+      const blob = new Blob(
+        ["\uFEFF", lines.join("\r\n")],
+        { type: "text/csv;charset=utf-8" }
+      );
+      downloadBlob(blob, `PMS006-${year}-${String(month).padStart(2, "0")}.csv`);
+      toast("CSVを出力しました");
+    }
+
+    function exportFiscalYearCsv() {
+      const [selectedYear, selectedMonth] = els.monthPicker.value.split("-").map(Number);
+      const fiscalYear = selectedMonth <= 3 ? selectedYear - 1 : selectedYear;
+      const lines = [
+        "date,year_month,first_in_name,first_in_time,last_out_name,last_out_time"
+      ];
+
+      for (let month = 4; month <= 12; month += 1) {
+        appendCsvMonthLines(lines, fiscalYear, month);
+      }
+      for (let month = 1; month <= 3; month += 1) {
+        appendCsvMonthLines(lines, fiscalYear + 1, month);
+      }
+
+      const blob = new Blob(
+        ["\uFEFF", lines.join("\r\n")],
+        { type: "text/csv;charset=utf-8" }
+      );
+      downloadBlob(blob, `PMS006-${fiscalYear}年度.csv`);
+      toast("年度CSVを出力しました");
+    }
+
+    function appendCsvMonthLines(lines, year, month) {
       for (let day = 1; day <= daysInMonth(year, month); day += 1) {
         const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
         const agg = buildDailyAggregate(date);
@@ -1097,19 +1133,13 @@
         }
         lines.push([
           csvValue(date),
+          csvValue(`${year}-${String(month).padStart(2, "0")}`),
           csvValue(agg.firstInName),
           csvValue(agg.firstInTime),
           csvValue(agg.lastOutName),
           csvValue(agg.lastOutTime)
         ].join(","));
       }
-
-      const blob = new Blob(
-        ["\uFEFF", lines.join("\r\n")],
-        { type: "text/csv;charset=utf-8" }
-      );
-      downloadBlob(blob, `PMS006-${year}-${String(month).padStart(2, "0")}.csv`);
-      toast("CSVを出力しました");
     }
 
     function exportMonthlyXlsx() {
