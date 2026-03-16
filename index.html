@@ -1,0 +1,1393 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f4c5c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="入退室記録">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>入退室記録</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --panel: rgba(255, 252, 246, 0.94);
+      --ink: #1b2430;
+      --muted: #647486;
+      --line: #d5ccb9;
+      --accent: #0f4c5c;
+      --in: #0f766e;
+      --out: #b42318;
+      --chip: #efe5d2;
+      --shadow: 0 16px 36px rgba(27, 36, 48, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font: 16px/1.45 "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(213, 121, 72, 0.15), transparent 22%),
+        radial-gradient(circle at bottom right, rgba(15, 76, 92, 0.14), transparent 24%),
+        var(--bg);
+      transition: background 220ms ease;
+    }
+
+    body.mode-in {
+      background:
+        radial-gradient(circle at top left, rgba(15, 118, 110, 0.22), transparent 22%),
+        radial-gradient(circle at bottom right, rgba(15, 76, 92, 0.16), transparent 24%),
+        #edf8f6;
+    }
+
+    body.mode-out {
+      background:
+        radial-gradient(circle at top left, rgba(180, 35, 24, 0.18), transparent 22%),
+        radial-gradient(circle at bottom right, rgba(166, 83, 64, 0.14), transparent 24%),
+        #fbf0ed;
+    }
+
+    main {
+      width: min(1080px, 100%);
+      margin: 0 auto;
+      padding: 18px 18px 48px;
+    }
+
+    .hero, .panel {
+      background: var(--panel);
+      border: 1px solid rgba(213, 204, 185, 0.9);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .hero {
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .hero-top, .toolbar, .row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    h1, h2 {
+      margin: 0;
+      letter-spacing: 0.02em;
+    }
+
+    h1 {
+      font-size: clamp(28px, 4vw, 46px);
+      font-weight: 800;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .sub, .note {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .clock {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .clock .time {
+      font-size: clamp(26px, 4vw, 42px);
+      font-weight: 800;
+    }
+
+    .seg {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 6px;
+      background: var(--chip);
+      border-radius: 16px;
+      width: min(320px, 100%);
+    }
+
+    .mode-note {
+      flex: 1;
+      min-width: 280px;
+      text-align: right;
+    }
+
+    .seg button, .btn, .member-btn, .tabs button {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .seg button {
+      padding: 14px 10px;
+      border-radius: 12px;
+      font-weight: 800;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .seg button.active.in { background: var(--in); color: white; }
+    .seg button.active.out { background: var(--out); color: white; }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin: 6px 0 14px;
+      flex-wrap: wrap;
+    }
+
+    .tabs button {
+      min-width: 148px;
+      padding: 12px 28px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: white;
+      color: var(--muted);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .tabs button.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .tabs button[data-tab="record"] {
+      min-width: 196px;
+      padding: 14px 38px;
+      font-weight: 800;
+      font-size: 17px;
+      box-shadow: 0 8px 18px rgba(27, 36, 48, 0.06);
+    }
+
+    .tabs button[data-tab="record"].active {
+      box-shadow: 0 12px 24px rgba(15, 76, 92, 0.18);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .members {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .member-btn {
+      min-height: 124px;
+      padding: 18px 14px;
+      border-radius: 18px;
+      border: 2px solid rgba(15, 76, 92, 0.15);
+      background: linear-gradient(180deg, #fffefb, #f4ecda);
+      color: var(--ink);
+      text-align: left;
+      transition: transform 120ms ease;
+    }
+
+    .member-btn:active {
+      transform: scale(0.985);
+    }
+
+    .member-btn.in-mode {
+      border-color: rgba(15, 118, 110, 0.5);
+    }
+
+    .member-btn.out-mode {
+      border-color: rgba(180, 35, 24, 0.45);
+    }
+
+    .member-btn .slot {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    .member-btn .name {
+      display: block;
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .member-btn .hint {
+      display: block;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 15px;
+      text-align: center;
+    }
+
+    .log-table-wrap {
+      max-height: 270px;
+      overflow-y: auto;
+      margin-top: 14px;
+      padding-right: 4px;
+    }
+
+    .log-table-wrap table {
+      margin-top: 0;
+    }
+
+    .btn, input {
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+      padding: 12px 14px;
+      font: inherit;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .btn.secondary {
+      background: #fff4ec;
+      border-color: #f0c6a8;
+      color: #93421a;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 9px 6px;
+      border-bottom: 1px solid #e8dfcf;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 60px 1fr 90px;
+      gap: 8px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .inline-input {
+      width: min(360px, 100%);
+    }
+
+    .inline-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: rgba(27, 36, 48, 0.92);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease;
+      z-index: 9999;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    @media (max-width: 1100px) {
+      main {
+        padding: 14px 14px 36px;
+      }
+
+      .hero, .panel {
+        border-radius: 18px;
+      }
+
+      .hero, .panel {
+        padding: 16px;
+      }
+
+      .layout {
+        gap: 14px;
+      }
+
+      .stack {
+        gap: 14px;
+      }
+
+      .members {
+        gap: 10px;
+      }
+
+      .member-btn {
+        min-height: 110px;
+        padding: 14px 12px;
+      }
+
+      .member-btn .name {
+        font-size: 25px;
+      }
+
+      .member-btn .hint {
+        font-size: 14px;
+      }
+
+      .tabs button {
+        min-width: 138px;
+        padding: 11px 20px;
+      }
+
+      .tabs button[data-tab="record"] {
+        min-width: 176px;
+        padding: 12px 26px;
+      }
+
+      table {
+        font-size: 13px;
+      }
+
+      th, td {
+        padding: 7px 5px;
+      }
+
+      .settings-grid {
+        grid-template-columns: 52px 1fr 76px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="sub">PMS006 月次帳票対応</div>
+          <h1>入退室記録</h1>
+        </div>
+        <div class="clock">
+          <div id="todayLabel" class="sub"></div>
+          <div id="clock" class="time"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="seg" aria-label="mode">
+          <button id="modeIn" class="active in">入室</button>
+          <button id="modeOut" class="out">退室</button>
+        </div>
+        <div class="note mode-note">
+          0:00-11:59は入室、12:00-23:59は退室に自動切替します。
+        </div>
+      </div>
+    </section>
+
+    <div class="tabs">
+      <button class="active" data-tab="record">記録</button>
+      <button data-tab="month">月次</button>
+      <button data-tab="settings">設定</button>
+    </div>
+
+    <div id="tab-record" class="layout">
+      <section class="panel">
+        <div id="memberGrid" class="members"></div>
+      </section>
+
+      <div class="stack">
+        <section class="panel">
+          <h2>本日の入退室</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>入室者</th>
+                <th>入室時間</th>
+                <th>退室者</th>
+                <th>退室時間</th>
+              </tr>
+            </thead>
+            <tbody id="todaySummaryBody"></tbody>
+          </table>
+        </section>
+
+        <section class="panel">
+          <h2>本日の最新記録</h2>
+          <div class="log-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>時刻</th>
+                  <th>氏名</th>
+                  <th>区分</th>
+                </tr>
+              </thead>
+              <tbody id="todayLogBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="tab-month" class="hidden">
+      <section class="panel">
+        <div class="toolbar">
+          <h2 style="margin-right:auto">月次一覧</h2>
+          <input id="monthPicker" type="month">
+          <button id="csvBtn" class="btn">選択した月をCSV出力</button>
+          <button id="shareBtn" class="btn">メールで送る</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>最初の入室者</th>
+              <th>入室時間</th>
+              <th>最後の退室者</th>
+              <th>退室時間</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyBody"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <div id="tab-settings" class="hidden">
+      <section class="panel">
+        <div class="toolbar">
+          <h2 style="margin-right:auto">名前設定</h2>
+          <button id="resetMembersBtn" class="btn secondary">初期化</button>
+        </div>
+
+        <div class="inline-row" style="margin-top: 12px;">
+          <div class="sub">メール送付先</div>
+          <input id="emailInput" class="inline-input" type="email" placeholder="example@company.co.jp">
+        </div>
+
+        <div class="toolbar" style="margin-top: 12px;">
+          <button id="backupBtn" class="btn">設定、記録データを保存</button>
+          <label class="btn">
+            保存データを読込
+            <input id="importInput" type="file" accept="application/json" class="hidden">
+          </label>
+        </div>
+
+        <div id="settingsMembers"></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const STORAGE_KEYS = {
+      members: "attendance.ipad.members.v1",
+      logs: "attendance.ipad.logs.v1",
+      ui: "attendance.ipad.ui.v1"
+    };
+
+    const defaultMembers = Array.from({ length: 12 }, (_, index) => ({
+      slot: index + 1,
+      name: index < 10 ? `担当${index + 1}` : `予備${index - 9}`,
+      enabled: true
+    }));
+
+    const state = {
+      mode: "in",
+      members: loadJson(STORAGE_KEYS.members, cloneMembers(defaultMembers)),
+      logs: loadJson(STORAGE_KEYS.logs, []),
+      ui: loadJson(STORAGE_KEYS.ui, {
+        tab: "record",
+        month: currentMonthValue(),
+        email: "",
+        modeOverride: null,
+        modeOverrideUntil: 0
+      })
+    };
+
+    const els = {
+      todayLabel: document.getElementById("todayLabel"),
+      clock: document.getElementById("clock"),
+      modeIn: document.getElementById("modeIn"),
+      modeOut: document.getElementById("modeOut"),
+      memberGrid: document.getElementById("memberGrid"),
+      todaySummaryBody: document.getElementById("todaySummaryBody"),
+      todayLogBody: document.getElementById("todayLogBody"),
+      monthPicker: document.getElementById("monthPicker"),
+      monthlyBody: document.getElementById("monthlyBody"),
+      backupBtn: document.getElementById("backupBtn"),
+      importInput: document.getElementById("importInput"),
+      csvBtn: document.getElementById("csvBtn"),
+      shareBtn: document.getElementById("shareBtn"),
+      resetMembersBtn: document.getElementById("resetMembersBtn"),
+      emailInput: document.getElementById("emailInput"),
+      settingsMembers: document.getElementById("settingsMembers"),
+      toast: document.getElementById("toast"),
+      tabs: Array.from(document.querySelectorAll(".tabs button"))
+    };
+
+    let toastTimer = null;
+
+    init();
+
+    function init() {
+      registerServiceWorker();
+      if (!Object.prototype.hasOwnProperty.call(state.ui, "modeOverride")) {
+        state.ui.modeOverride = null;
+      }
+      if (!Object.prototype.hasOwnProperty.call(state.ui, "modeOverrideUntil")) {
+        state.ui.modeOverrideUntil = 0;
+      }
+      els.monthPicker.value = state.ui.month || currentMonthValue();
+      els.emailInput.value = state.ui.email || "";
+      bindEvents();
+      tickClock();
+      setInterval(tickClock, 1000);
+      switchTab(state.ui.tab || "record");
+      renderAll();
+    }
+
+    function registerServiceWorker() {
+      if (!("serviceWorker" in navigator)) {
+        return;
+      }
+      if (!window.isSecureContext) {
+        return;
+      }
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
+
+    function bindEvents() {
+      els.modeIn.addEventListener("click", () => toggleManualMode("in"));
+      els.modeOut.addEventListener("click", () => toggleManualMode("out"));
+      els.backupBtn.addEventListener("click", exportBackup);
+      els.importInput.addEventListener("change", importBackup);
+      els.csvBtn.addEventListener("click", exportMonthlyCsv);
+      els.shareBtn.addEventListener("click", shareMonthlyXlsx);
+      els.resetMembersBtn.addEventListener("click", resetMembers);
+      els.monthPicker.addEventListener("change", () => {
+        state.ui.month = els.monthPicker.value;
+        saveJson(STORAGE_KEYS.ui, state.ui);
+        renderMonthly();
+      });
+      els.emailInput.addEventListener("change", saveEmail);
+      els.emailInput.addEventListener("blur", saveEmail);
+      els.tabs.forEach((button) => {
+        button.addEventListener("click", () => switchTab(button.dataset.tab));
+      });
+    }
+
+    function saveEmail() {
+      state.ui.email = els.emailInput.value.trim();
+      saveJson(STORAGE_KEYS.ui, state.ui);
+    }
+
+    function switchTab(name) {
+      state.ui.tab = name;
+      saveJson(STORAGE_KEYS.ui, state.ui);
+
+      els.tabs.forEach((button) => {
+        button.classList.toggle("active", button.dataset.tab === name);
+      });
+
+      document.getElementById("tab-record").classList.toggle("hidden", name !== "record");
+      document.getElementById("tab-month").classList.toggle("hidden", name !== "month");
+      document.getElementById("tab-settings").classList.toggle("hidden", name !== "settings");
+    }
+
+    function loadJson(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function saveJson(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function cloneMembers(items) {
+      return items.map((item) => ({ ...item }));
+    }
+
+    function currentMonthValue(date = new Date()) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function formatDateJP(date = new Date()) {
+      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+
+    function tickClock() {
+      const now = new Date();
+      els.todayLabel.textContent = formatDateJP(now);
+      els.clock.textContent = now.toLocaleTimeString("ja-JP", { hour12: false });
+      syncModeFromClock(now);
+    }
+
+    function toggleManualMode(mode) {
+      state.ui.modeOverride = mode;
+      state.ui.modeOverrideUntil = Date.now() + 30000;
+      saveJson(STORAGE_KEYS.ui, state.ui);
+      syncModeFromClock(new Date());
+      toast(`${mode === "in" ? "入室" : "退室"}に30秒切替しました`);
+    }
+
+    function setMode(mode) {
+      const changed = state.mode !== mode;
+      state.mode = mode;
+      document.body.classList.toggle("mode-in", mode === "in");
+      document.body.classList.toggle("mode-out", mode === "out");
+      els.modeIn.classList.toggle("active", mode === "in");
+      els.modeOut.classList.toggle("active", mode === "out");
+      const overrideActive = Boolean(state.ui.modeOverride) && Date.now() < Number(state.ui.modeOverrideUntil || 0);
+      els.modeIn.title = overrideActive && state.ui.modeOverride === "in" ? "30秒の手動切替中" : "";
+      els.modeOut.title = overrideActive && state.ui.modeOverride === "out" ? "30秒の手動切替中" : "";
+      if (changed) {
+        renderMembers();
+      }
+    }
+
+    function syncModeFromClock(now = new Date()) {
+      const autoMode = now.getHours() < 12 ? "in" : "out";
+      const overrideActive = Boolean(state.ui.modeOverride) && Date.now() < Number(state.ui.modeOverrideUntil || 0);
+      if (!overrideActive && (state.ui.modeOverride || state.ui.modeOverrideUntil)) {
+        state.ui.modeOverride = null;
+        state.ui.modeOverrideUntil = 0;
+        saveJson(STORAGE_KEYS.ui, state.ui);
+      }
+      setMode(overrideActive ? state.ui.modeOverride : autoMode);
+    }
+
+    function renderAll() {
+      renderMembers();
+      renderToday();
+      renderMonthly();
+      renderSettings();
+    }
+
+    function renderMembers() {
+      els.memberGrid.innerHTML = "";
+      state.members
+        .filter((member) => member.enabled)
+        .forEach((member) => {
+          const button = document.createElement("button");
+          button.className = `member-btn ${state.mode === "in" ? "in-mode" : "out-mode"}`;
+          button.innerHTML = `
+            <span class="slot">${String(member.slot).padStart(2, "0")}</span>
+            <span class="name">${escapeHtml(member.name)}</span>
+            <span class="hint">${state.mode === "in" ? "入室として記録" : "退室として記録"}</span>
+          `;
+          button.addEventListener("click", () => recordTap(member.slot));
+          els.memberGrid.appendChild(button);
+        });
+    }
+
+    function renderToday() {
+      const today = isoDate(new Date());
+      const todayLogs = state.logs
+        .filter((log) => log.date === today)
+        .sort((a, b) => b.ts.localeCompare(a.ts));
+      const agg = buildDailyAggregate(today);
+
+      els.todaySummaryBody.innerHTML = "";
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${today}</td>
+        <td>${escapeHtml(agg.firstInName)}</td>
+        <td>${escapeHtml(agg.firstInTime)}</td>
+        <td>${escapeHtml(agg.lastOutName)}</td>
+        <td>${escapeHtml(agg.lastOutTime)}</td>
+      `;
+      els.todaySummaryBody.appendChild(row);
+
+      els.todayLogBody.innerHTML = "";
+      if (!todayLogs.length) {
+        const empty = document.createElement("tr");
+        empty.innerHTML = `<td colspan="3" class="note">まだ記録がありません。</td>`;
+        els.todayLogBody.appendChild(empty);
+        return;
+      }
+
+      todayLogs.slice(0, 5).forEach((log) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(log.time)}</td>
+          <td>${escapeHtml(log.nameSnapshot)}</td>
+          <td>${log.action === "in" ? "入室" : "退室"}</td>
+        `;
+        els.todayLogBody.appendChild(tr);
+      });
+    }
+
+    function renderMonthly() {
+      const [year, month] = (els.monthPicker.value || currentMonthValue()).split("-").map(Number);
+      const lastDay = daysInMonth(year, month);
+      els.monthlyBody.innerHTML = "";
+
+      for (let day = 1; day <= lastDay; day += 1) {
+        const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const agg = buildDailyAggregate(date);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${month}/${day}</td>
+          <td>${escapeHtml(agg.firstInName)}</td>
+          <td>${escapeHtml(agg.firstInTime)}</td>
+          <td>${escapeHtml(agg.lastOutName)}</td>
+          <td>${escapeHtml(agg.lastOutTime)}</td>
+        `;
+        els.monthlyBody.appendChild(tr);
+      }
+    }
+
+    function renderSettings() {
+      els.settingsMembers.innerHTML = "";
+
+      state.members.forEach((member) => {
+        const row = document.createElement("div");
+        row.className = "settings-grid";
+        row.innerHTML = `
+          <div>#${String(member.slot).padStart(2, "0")}</div>
+          <input type="text" value="${escapeAttribute(member.name)}" maxlength="20">
+          <label><input type="checkbox" ${member.enabled ? "checked" : ""}> 有効</label>
+        `;
+
+        const nameInput = row.querySelector("input[type=text]");
+        const enabledInput = row.querySelector("input[type=checkbox]");
+
+        nameInput.addEventListener("change", () => {
+          member.name = nameInput.value.trim() || `枠${member.slot}`;
+          persistAndRender();
+        });
+
+        enabledInput.addEventListener("change", () => {
+          member.enabled = enabledInput.checked;
+          persistAndRender();
+        });
+
+        els.settingsMembers.appendChild(row);
+      });
+    }
+
+    function persistAndRender() {
+      saveJson(STORAGE_KEYS.members, state.members);
+      saveJson(STORAGE_KEYS.logs, state.logs);
+      renderAll();
+    }
+
+    function recordTap(slot) {
+      const member = state.members.find((item) => item.slot === slot && item.enabled);
+      if (!member) {
+        toast("無効な枠です");
+        return;
+      }
+
+      const now = new Date();
+      const last = findLastSameAction(slot, state.mode);
+      if (last) {
+        const diffMs = now.getTime() - new Date(last.ts).getTime();
+        if (diffMs >= 0 && diffMs < 10000) {
+          toast("10秒以内の同一連打は無視しました");
+          return;
+        }
+      }
+
+      state.logs.push({
+        id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        ts: now.toISOString(),
+        date: isoDate(now),
+        time: now.toLocaleTimeString("ja-JP", {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit"
+        }),
+        slot,
+        nameSnapshot: member.name,
+        action: state.mode
+      });
+
+      saveJson(STORAGE_KEYS.logs, state.logs);
+      renderToday();
+      renderMonthly();
+      toast(`${member.name} を${state.mode === "in" ? "入室" : "退室"}で記録`);
+    }
+
+    function findLastSameAction(slot, action) {
+      for (let i = state.logs.length - 1; i >= 0; i -= 1) {
+        if (state.logs[i].slot === slot && state.logs[i].action === action) {
+          return state.logs[i];
+        }
+      }
+      return null;
+    }
+
+    function buildDailyAggregate(date) {
+      const dayLogs = state.logs
+        .filter((log) => log.date === date)
+        .sort((a, b) => a.ts.localeCompare(b.ts));
+
+      let firstIn = null;
+      let lastOut = null;
+
+      dayLogs.forEach((log) => {
+        if (log.action === "in" && !firstIn) {
+          firstIn = log;
+        }
+        if (log.action === "out") {
+          lastOut = log;
+        }
+      });
+
+      return {
+        firstInName: firstIn ? firstIn.nameSnapshot : "",
+        firstInTime: firstIn ? firstIn.time : "",
+        lastOutName: lastOut ? lastOut.nameSnapshot : "",
+        lastOutTime: lastOut ? lastOut.time : ""
+      };
+    }
+
+    function exportBackup() {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        members: state.members,
+        logs: state.logs
+      };
+      downloadBlob(
+        new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
+        `attendance-backup-${stampDate(new Date())}.json`
+      );
+      toast("データを保存しました");
+    }
+
+    function importBackup(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(String(reader.result));
+          if (!Array.isArray(data.members) || !Array.isArray(data.logs)) {
+            throw new Error("invalid");
+          }
+          state.members = data.members;
+          state.logs = data.logs;
+          saveJson(STORAGE_KEYS.members, state.members);
+          saveJson(STORAGE_KEYS.logs, state.logs);
+          renderAll();
+          toast("保存データを読み込みました");
+        } catch {
+          toast("保存データの形式が正しくありません");
+        } finally {
+          els.importInput.value = "";
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetMembers() {
+      if (!window.confirm("名前設定を初期化しますか？")) {
+        return;
+      }
+      state.members = cloneMembers(defaultMembers);
+      saveJson(STORAGE_KEYS.members, state.members);
+      renderAll();
+      toast("名前設定を初期化しました");
+    }
+
+    function exportMonthlyCsv() {
+      const [year, month] = els.monthPicker.value.split("-").map(Number);
+      const lines = [
+        "date,first_in_name,first_in_time,last_out_name,last_out_time"
+      ];
+
+      for (let day = 1; day <= daysInMonth(year, month); day += 1) {
+        const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const agg = buildDailyAggregate(date);
+        if (!(agg.firstInName || agg.firstInTime || agg.lastOutName || agg.lastOutTime)) {
+          continue;
+        }
+        lines.push([
+          csvValue(date),
+          csvValue(agg.firstInName),
+          csvValue(agg.firstInTime),
+          csvValue(agg.lastOutName),
+          csvValue(agg.lastOutTime)
+        ].join(","));
+      }
+
+      const blob = new Blob(
+        ["\uFEFF", lines.join("\r\n")],
+        { type: "text/csv;charset=utf-8" }
+      );
+      downloadBlob(blob, `PMS006-${year}-${String(month).padStart(2, "0")}.csv`);
+      toast("CSVを出力しました");
+    }
+
+    function exportMonthlyXlsx() {
+      const [year, month] = els.monthPicker.value.split("-").map(Number);
+      const blob = buildMonthlyXlsx(year, month);
+      downloadBlob(blob, `PMS006-${year}-${String(month).padStart(2, "0")}.xlsx`);
+      toast("Excelを出力しました");
+    }
+
+    async function shareMonthlyXlsx() {
+      const [year, month] = els.monthPicker.value.split("-").map(Number);
+      const filename = `PMS006-${year}-${String(month).padStart(2, "0")}.xlsx`;
+      const blob = buildMonthlyXlsx(year, month);
+      const recipient = (state.ui.email || "").trim();
+
+      if (recipient && navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(recipient);
+        } catch {}
+      }
+
+      if (typeof File !== "undefined" && navigator.share && typeof navigator.canShare === "function") {
+        const file = new File([blob], filename, {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+
+        if (navigator.canShare({ files: [file] })) {
+          const text = recipient
+            ? `宛先: ${recipient}\n共有画面でメールを選び、添付したExcelを送信してください。`
+            : "共有画面でメールを選び、添付したExcelを送信してください。";
+
+          try {
+            await navigator.share({
+              title: filename,
+              text,
+              files: [file]
+            });
+            toast("共有画面を開きました");
+            return;
+          } catch {
+            return;
+          }
+        }
+      }
+
+      downloadBlob(blob, filename);
+      openMailDraft(filename, recipient);
+      toast("Excelを保存し、メール作成を開きました");
+    }
+
+    function openMailDraft(filename, recipient) {
+      const subject = encodeURIComponent(`入退室記録 ${filename}`);
+      const body = encodeURIComponent(
+        recipient
+          ? `${recipient} 宛てに送信してください。\n保存した ${filename} を添付してください。`
+          : `保存した ${filename} を添付して送信してください。`
+      );
+      const to = encodeURIComponent(recipient || "");
+      window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+    }
+
+    function buildMonthlyXlsx(year, month) {
+      const entries = [
+        { name: "[Content_Types].xml", text: buildContentTypesXml() },
+        { name: "_rels/.rels", text: buildRootRelsXml() },
+        { name: "xl/workbook.xml", text: buildWorkbookXml() },
+        { name: "xl/_rels/workbook.xml.rels", text: buildWorkbookRelsXml() },
+        { name: "xl/styles.xml", text: buildStylesXml() },
+        { name: "xl/worksheets/sheet1.xml", text: buildSheetXml(year, month) }
+      ];
+
+      return makeZipBlob(entries);
+    }
+
+    function buildContentTypesXml() {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+    }
+
+    function buildRootRelsXml() {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+    }
+
+    function buildWorkbookXml() {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <bookViews>
+    <workbookView xWindow="0" yWindow="0" windowWidth="22000" windowHeight="12000"/>
+  </bookViews>
+  <sheets>
+    <sheet name="入退室管理台帳" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>`;
+    }
+
+    function buildWorkbookRelsXml() {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+    }
+
+    function buildStylesXml() {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="4">
+    <font><sz val="11"/><name val="Meiryo"/></font>
+    <font><b/><sz val="14"/><name val="Meiryo"/></font>
+    <font><b/><sz val="11"/><name val="Meiryo"/></font>
+    <font><sz val="10"/><name val="Meiryo"/></font>
+  </fonts>
+  <fills count="2">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+  </fills>
+  <borders count="3">
+    <border><left/><right/><top/><bottom/><diagonal/></border>
+    <border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/><diagonal/></border>
+    <border><left/><right/><top/><bottom style="thin"/><diagonal/></border>
+  </borders>
+  <cellStyleXfs count="1">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+  </cellStyleXfs>
+  <cellXfs count="6">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center" wrapText="1"/>
+    </xf>
+    <xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="center" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center"/>
+    </xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="2" xfId="0" applyBorder="1" applyAlignment="1">
+      <alignment horizontal="left" vertical="center"/>
+    </xf>
+  </cellXfs>
+  <cellStyles count="1">
+    <cellStyle name="標準" xfId="0" builtinId="0"/>
+  </cellStyles>
+  <dxfs count="0"/>
+  <tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/>
+</styleSheet>`;
+    }
+
+    function buildSheetXml(year, month) {
+      const lastDay = daysInMonth(year, month);
+      const rows = [];
+
+      rows.push(buildRowXml(1, [
+        buildCellXml("C1", "入退室(解錠施錠)管理台帳", 1),
+        buildCellXml("D1", "", 1),
+        buildCellXml("E1", "", 1),
+        buildCellXml("F1", "(共有部分)", 1),
+        buildCellXml("G1", "", 1),
+        buildCellXml("H1", "PMS006-帳01", 1)
+      ], 24));
+
+      rows.push(buildRowXml(2, [
+        buildCellXml("C2", "", 1),
+        buildCellXml("D2", "", 1),
+        buildCellXml("E2", "", 1),
+        buildCellXml("F2", "", 1),
+        buildCellXml("G2", "", 1),
+        buildCellXml("H2", "フロア管理表", 3)
+      ], 22));
+
+      rows.push(buildRowXml(3, [
+        buildCellXml("C3", `${year}年 ${month}月`, 1),
+        buildCellXml("D3", "", 1),
+        buildCellXml("G3", "No.", 3),
+        buildCellXml("H3", "", 3)
+      ], 28));
+
+      rows.push(buildRowXml(4, [
+        buildCellXml("C4", "日付", 2),
+        buildCellXml("D4", "入室(解錠)者名", 2),
+        buildCellXml("E4", "入室時間", 2),
+        buildCellXml("F4", "退室(施錠)者名", 2),
+        buildCellXml("G4", "退室時間", 2),
+        buildCellXml("H4", "確認", 2)
+      ], 24));
+
+      for (let day = 1; day <= 31; day += 1) {
+        const rowIndex = day + 4;
+        const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const agg = day <= lastDay
+          ? buildDailyAggregate(date)
+          : { firstInName: "", firstInTime: "", lastOutName: "", lastOutTime: "" };
+
+        rows.push(buildRowXml(rowIndex, [
+          buildCellXml(`C${rowIndex}`, day <= lastDay ? `${month}/${day}` : "", 3),
+          buildCellXml(`D${rowIndex}`, agg.firstInName, 4),
+          buildCellXml(`E${rowIndex}`, agg.firstInTime, 4),
+          buildCellXml(`F${rowIndex}`, agg.lastOutName, 4),
+          buildCellXml(`G${rowIndex}`, agg.lastOutTime, 4),
+          buildCellXml(`H${rowIndex}`, "", 4)
+        ], 22));
+      }
+
+      rows.push(buildRowXml(36, [
+        buildCellXml("C36", "", 5),
+        buildCellXml("D36", "", 5),
+        buildCellXml("E36", "", 5),
+        buildCellXml("F36", "", 5),
+        buildCellXml("G36", "", 5),
+        buildCellXml("H36", "", 5)
+      ], 22));
+
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <dimension ref="C1:H36"/>
+  <sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews>
+  <sheetFormatPr defaultRowHeight="15"/>
+  <cols>
+    <col min="3" max="3" width="9.5" customWidth="1"/>
+    <col min="4" max="4" width="20" customWidth="1"/>
+    <col min="5" max="5" width="12" customWidth="1"/>
+    <col min="6" max="6" width="20" customWidth="1"/>
+    <col min="7" max="7" width="12" customWidth="1"/>
+    <col min="8" max="8" width="12" customWidth="1"/>
+  </cols>
+  <sheetData>${rows.join("")}</sheetData>
+  <mergeCells count="3">
+    <mergeCell ref="C1:E2"/>
+    <mergeCell ref="F1:G2"/>
+    <mergeCell ref="C3:D3"/>
+  </mergeCells>
+  <pageMargins left="0.25" right="0.25" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>
+</worksheet>`;
+    }
+
+    function buildRowXml(rowIndex, cells, height) {
+      return `<row r="${rowIndex}" ht="${height}" customHeight="1">${cells.join("")}</row>`;
+    }
+
+    function buildCellXml(ref, value, style) {
+      if (!value) {
+        return `<c r="${ref}" s="${style}"/>`;
+      }
+      return `<c r="${ref}" s="${style}" t="inlineStr"><is><t>${xmlEscape(value)}</t></is></c>`;
+    }
+
+    function makeZipBlob(entries) {
+      const encoder = new TextEncoder();
+      const localParts = [];
+      const centralParts = [];
+      let offset = 0;
+
+      entries.forEach((entry) => {
+        const nameBytes = encoder.encode(entry.name);
+        const dataBytes = encoder.encode(entry.text);
+        const crc = crc32(dataBytes);
+
+        const localHeader = new Uint8Array(30 + nameBytes.length);
+        const localView = new DataView(localHeader.buffer);
+        localView.setUint32(0, 0x04034b50, true);
+        localView.setUint16(4, 20, true);
+        localView.setUint16(6, 0, true);
+        localView.setUint16(8, 0, true);
+        localView.setUint16(10, 0, true);
+        localView.setUint16(12, 0, true);
+        localView.setUint32(14, crc, true);
+        localView.setUint32(18, dataBytes.length, true);
+        localView.setUint32(22, dataBytes.length, true);
+        localView.setUint16(26, nameBytes.length, true);
+        localView.setUint16(28, 0, true);
+        localHeader.set(nameBytes, 30);
+        localParts.push(localHeader, dataBytes);
+
+        const centralHeader = new Uint8Array(46 + nameBytes.length);
+        const centralView = new DataView(centralHeader.buffer);
+        centralView.setUint32(0, 0x02014b50, true);
+        centralView.setUint16(4, 20, true);
+        centralView.setUint16(6, 20, true);
+        centralView.setUint16(8, 0, true);
+        centralView.setUint16(10, 0, true);
+        centralView.setUint16(12, 0, true);
+        centralView.setUint16(14, 0, true);
+        centralView.setUint32(16, crc, true);
+        centralView.setUint32(20, dataBytes.length, true);
+        centralView.setUint32(24, dataBytes.length, true);
+        centralView.setUint16(28, nameBytes.length, true);
+        centralView.setUint16(30, 0, true);
+        centralView.setUint16(32, 0, true);
+        centralView.setUint16(34, 0, true);
+        centralView.setUint16(36, 0, true);
+        centralView.setUint32(38, 0, true);
+        centralView.setUint32(42, offset, true);
+        centralHeader.set(nameBytes, 46);
+        centralParts.push(centralHeader);
+
+        offset += localHeader.length + dataBytes.length;
+      });
+
+      const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+
+      const endRecord = new Uint8Array(22);
+      const endView = new DataView(endRecord.buffer);
+      endView.setUint32(0, 0x06054b50, true);
+      endView.setUint16(4, 0, true);
+      endView.setUint16(6, 0, true);
+      endView.setUint16(8, entries.length, true);
+      endView.setUint16(10, entries.length, true);
+      endView.setUint32(12, centralSize, true);
+      endView.setUint32(16, offset, true);
+      endView.setUint16(20, 0, true);
+
+      return new Blob(
+        localParts.concat(centralParts).concat([endRecord]),
+        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+      );
+    }
+
+    const crcTable = (() => {
+      const table = new Uint32Array(256);
+      for (let n = 0; n < 256; n += 1) {
+        let c = n;
+        for (let k = 0; k < 8; k += 1) {
+          c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        table[n] = c >>> 0;
+      }
+      return table;
+    })();
+
+    function crc32(bytes) {
+      let crc = 0xffffffff;
+      for (let i = 0; i < bytes.length; i += 1) {
+        crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function daysInMonth(year, month) {
+      return new Date(year, month, 0).getDate();
+    }
+
+    function isoDate(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+
+    function stampDate(date) {
+      return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}-${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}${String(date.getSeconds()).padStart(2, "0")}`;
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function toast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        els.toast.classList.remove("show");
+      }, 1800);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value);
+    }
+
+    function xmlEscape(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    }
+
+    function csvValue(value) {
+      const text = String(value ?? "");
+      if (/[",\r\n]/.test(text)) {
+        return `"${text.replace(/"/g, "\"\"")}"`;
+      }
+      return text;
+    }
+  </script>
+</body>
+</html>

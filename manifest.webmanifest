@@ -1,0 +1,9 @@
+{
+  "name": "入退室記録",
+  "short_name": "入退室記録",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4efe6",
+  "theme_color": "#0f4c5c",
+  "lang": "ja-JP"
+}
