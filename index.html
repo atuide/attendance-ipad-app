@@ -278,6 +278,39 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .month-panel h2 {
+      font-size: 24px;
+    }
+
+    .month-panel .toolbar {
+      align-items: center;
+      gap: 14px;
+    }
+
+    .month-panel input,
+    .month-panel .btn {
+      font-size: 18px;
+      padding: 14px 16px;
+    }
+
+    .month-panel table {
+      font-size: 18px;
+      margin-top: 12px;
+    }
+
+    .month-panel th,
+    .month-panel td {
+      padding: 8px 6px;
+    }
+
+    .month-panel th {
+      font-size: 14px;
+    }
+
+    .month-panel td {
+      font-size: 18px;
+    }
+
     .summary-panel {
       align-self: start;
       padding: 10px 14px 4px;
@@ -463,6 +496,20 @@
         padding: 12px 26px;
       }
 
+      .month-panel input,
+      .month-panel .btn {
+        font-size: 16px;
+        padding: 12px 14px;
+      }
+
+      .month-panel table {
+        font-size: 16px;
+      }
+
+      .month-panel td {
+        font-size: 16px;
+      }
+
       table {
         font-size: 13px;
       }
@@ -549,7 +596,7 @@
     </div>
 
     <div id="tab-month" class="hidden">
-      <section class="panel">
+      <section class="panel month-panel">
         <div class="toolbar">
           <h2 style="margin-right:auto">月次一覧</h2>
           <input id="monthPicker" type="month">
