@@ -335,6 +335,14 @@
       flex-wrap: wrap;
     }
 
+    .summary-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
     .summary-date {
       color: var(--muted);
       font-size: 16px;
@@ -582,7 +590,10 @@
         <section class="panel summary-panel">
           <div class="summary-head">
             <h2>本日の入退室</h2>
-            <div id="todaySummaryDate" class="summary-date"></div>
+            <div class="summary-tools">
+              <div id="todaySummaryDate" class="summary-date"></div>
+              <button id="clearTodayBtn" class="btn secondary">本日の記録をクリア</button>
+            </div>
           </div>
           <table>
             <tbody id="todaySummaryBody"></tbody>
@@ -694,6 +705,7 @@
       memberGrid: document.getElementById("memberGrid"),
       todaySummaryBody: document.getElementById("todaySummaryBody"),
       todaySummaryDate: document.getElementById("todaySummaryDate"),
+      clearTodayBtn: document.getElementById("clearTodayBtn"),
       todayLogBody: document.getElementById("todayLogBody"),
       monthPicker: document.getElementById("monthPicker"),
       monthlyBody: document.getElementById("monthlyBody"),
@@ -750,6 +762,7 @@
       els.yearCsvBtn.addEventListener("click", exportFiscalYearCsv);
       els.shareBtn.addEventListener("click", shareMonthlyXlsx);
       els.yearShareBtn.addEventListener("click", shareFiscalYearCsv);
+      els.clearTodayBtn.addEventListener("click", clearTodayLogs);
       els.resetMembersBtn.addEventListener("click", resetMembers);
       els.monthPicker.addEventListener("change", () => {
         state.ui.month = els.monthPicker.value;
@@ -961,6 +974,23 @@
 
         els.settingsMembers.appendChild(row);
       });
+    }
+
+    function clearTodayLogs() {
+      const today = isoDate(new Date());
+      const hasTodayLogs = state.logs.some((log) => log.date === today);
+      if (!hasTodayLogs) {
+        toast("本日の記録はありません");
+        return;
+      }
+      if (!window.confirm("本日の記録を削除しますか？")) {
+        return;
+      }
+      state.logs = state.logs.filter((log) => log.date !== today);
+      saveJson(STORAGE_KEYS.logs, state.logs);
+      renderToday();
+      renderMonthly();
+      toast("本日の記録を削除しました");
     }
 
     function persistAndRender() {
