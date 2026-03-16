@@ -1125,13 +1125,6 @@
       const blob = buildMonthlyXlsx(year, month);
       const recipient = (state.ui.email || "").trim();
 
-      if (recipient) {
-        downloadBlob(blob, filename);
-        openMailDraft(filename, recipient);
-        toast("Excelを保存し、メール作成を開きました");
-        return;
-      }
-
       if (typeof File !== "undefined" && navigator.share && typeof navigator.canShare === "function") {
         const file = new File([blob], filename, {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
