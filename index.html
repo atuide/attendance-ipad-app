@@ -1134,7 +1134,7 @@
           try {
             await navigator.share({
               title: filename,
-              text: "共有画面でメールを選び、添付したExcelを送信してください。",
+              text: recipient ? `送付先: ${recipient}` : "",
               files: [file]
             });
             toast("共有画面を開きました");
