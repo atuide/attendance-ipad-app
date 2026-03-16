@@ -201,7 +201,7 @@
     }
 
     .member-btn {
-      min-height: 124px;
+      min-height: 138px;
       padding: 18px 14px;
       border-radius: 18px;
       border: 2px solid rgba(15, 76, 92, 0.15);
@@ -262,8 +262,23 @@
       padding: 14px 18px 6px;
     }
 
+    .summary-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .summary-date {
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
     .summary-panel table {
-      margin-top: 4px;
+      margin-top: 0;
       font-size: 13px;
     }
 
@@ -274,7 +289,25 @@
 
     .summary-panel h2 {
       font-size: 18px;
-      margin-bottom: 2px;
+      margin-bottom: 0;
+    }
+
+    .summary-label {
+      width: 52px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .summary-name {
+      font-weight: 700;
+    }
+
+    .summary-time {
+      width: 64px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
     }
 
     .btn, input {
@@ -388,7 +421,7 @@
       }
 
       .member-btn {
-        min-height: 110px;
+        min-height: 122px;
         padding: 14px 12px;
       }
 
@@ -468,17 +501,11 @@
 
       <div class="stack">
         <section class="panel summary-panel">
-          <h2>本日の入退室</h2>
+          <div class="summary-head">
+            <h2>本日の入退室</h2>
+            <div id="todaySummaryDate" class="summary-date"></div>
+          </div>
           <table>
-            <thead>
-              <tr>
-                <th>日付</th>
-                <th>入室者</th>
-                <th>入室時間</th>
-                <th>退室者</th>
-                <th>退室時間</th>
-              </tr>
-            </thead>
             <tbody id="todaySummaryBody"></tbody>
           </table>
         </section>
@@ -585,6 +612,7 @@
       modeOut: document.getElementById("modeOut"),
       memberGrid: document.getElementById("memberGrid"),
       todaySummaryBody: document.getElementById("todaySummaryBody"),
+      todaySummaryDate: document.getElementById("todaySummaryDate"),
       todayLogBody: document.getElementById("todayLogBody"),
       monthPicker: document.getElementById("monthPicker"),
       monthlyBody: document.getElementById("monthlyBody"),
@@ -765,16 +793,21 @@
         .sort((a, b) => b.ts.localeCompare(a.ts));
       const agg = buildDailyAggregate(today);
 
+      els.todaySummaryDate.textContent = today;
       els.todaySummaryBody.innerHTML = "";
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${today}</td>
-        <td>${escapeHtml(agg.firstInName)}</td>
-        <td>${escapeHtml(agg.firstInTime)}</td>
-        <td>${escapeHtml(agg.lastOutName)}</td>
-        <td>${escapeHtml(agg.lastOutTime)}</td>
-      `;
-      els.todaySummaryBody.appendChild(row);
+      const rows = [
+        { label: "入室", name: agg.firstInName, time: agg.firstInTime },
+        { label: "退室", name: agg.lastOutName, time: agg.lastOutTime }
+      ];
+      rows.forEach((item) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <th class="summary-label">${item.label}者</th>
+          <td class="summary-name">${escapeHtml(item.name)}</td>
+          <td class="summary-time">${escapeHtml(item.time)}</td>
+        `;
+        els.todaySummaryBody.appendChild(row);
+      });
 
       els.todayLogBody.innerHTML = "";
       if (!todayLogs.length) {
