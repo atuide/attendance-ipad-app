@@ -185,11 +185,6 @@
       gap: 18px;
     }
 
-    .stack {
-      display: grid;
-      gap: 18px;
-    }
-
     .panel {
       padding: 18px;
     }
@@ -248,7 +243,7 @@
     }
 
     .log-table-wrap {
-      max-height: 270px;
+      max-height: 320px;
       overflow-y: auto;
       margin-top: 14px;
       padding-right: 4px;
@@ -412,10 +407,6 @@
         gap: 14px;
       }
 
-      .stack {
-        gap: 14px;
-      }
-
       .members {
         gap: 10px;
       }
@@ -499,34 +490,32 @@
         <div id="memberGrid" class="members"></div>
       </section>
 
-      <div class="stack">
-        <section class="panel summary-panel">
-          <div class="summary-head">
-            <h2>本日の入退室</h2>
-            <div id="todaySummaryDate" class="summary-date"></div>
-          </div>
-          <table>
-            <tbody id="todaySummaryBody"></tbody>
-          </table>
-        </section>
-
-        <section class="panel">
-          <h2>本日の最新記録</h2>
-          <div class="log-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>時刻</th>
-                  <th>氏名</th>
-                  <th>区分</th>
-                </tr>
-              </thead>
-              <tbody id="todayLogBody"></tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+      <section class="panel summary-panel">
+        <div class="summary-head">
+          <h2>本日の入退室</h2>
+          <div id="todaySummaryDate" class="summary-date"></div>
+        </div>
+        <table>
+          <tbody id="todaySummaryBody"></tbody>
+        </table>
+      </section>
     </div>
+
+    <section id="record-log-panel" class="panel" style="margin-top: 18px;">
+      <h2>本日の最新記録</h2>
+      <div class="log-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>時刻</th>
+              <th>氏名</th>
+              <th>区分</th>
+            </tr>
+          </thead>
+          <tbody id="todayLogBody"></tbody>
+        </table>
+      </div>
+    </section>
 
     <div id="tab-month" class="hidden">
       <section class="panel">
@@ -692,6 +681,7 @@
       });
 
       document.getElementById("tab-record").classList.toggle("hidden", name !== "record");
+      document.getElementById("record-log-panel").classList.toggle("hidden", name !== "record");
       document.getElementById("tab-month").classList.toggle("hidden", name !== "month");
       document.getElementById("tab-settings").classList.toggle("hidden", name !== "settings");
     }
