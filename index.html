@@ -1125,10 +1125,11 @@
       const blob = buildMonthlyXlsx(year, month);
       const recipient = (state.ui.email || "").trim();
 
-      if (recipient && navigator.clipboard && navigator.clipboard.writeText) {
-        try {
-          await navigator.clipboard.writeText(recipient);
-        } catch {}
+      if (recipient) {
+        downloadBlob(blob, filename);
+        openMailDraft(filename, recipient);
+        toast("Excelを保存し、メール作成を開きました");
+        return;
       }
 
       if (typeof File !== "undefined" && navigator.share && typeof navigator.canShare === "function") {
@@ -1137,14 +1138,10 @@
         });
 
         if (navigator.canShare({ files: [file] })) {
-          const text = recipient
-            ? `宛先: ${recipient}\n共有画面でメールを選び、添付したExcelを送信してください。`
-            : "共有画面でメールを選び、添付したExcelを送信してください。";
-
           try {
             await navigator.share({
               title: filename,
-              text,
+              text: "共有画面でメールを選び、添付したExcelを送信してください。",
               files: [file]
             });
             toast("共有画面を開きました");
@@ -1163,11 +1160,9 @@
     function openMailDraft(filename, recipient) {
       const subject = encodeURIComponent(`入退室記録 ${filename}`);
       const body = encodeURIComponent(
-        recipient
-          ? `${recipient} 宛てに送信してください。\n保存した ${filename} を添付してください。`
-          : `保存した ${filename} を添付して送信してください。`
+        `保存した ${filename} を添付して送信してください。`
       );
-      const to = encodeURIComponent(recipient || "");
+      const to = recipient || "";
       window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
     }
 
