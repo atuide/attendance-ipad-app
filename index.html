@@ -615,6 +615,7 @@
           <button id="csvBtn" class="btn">選択した月をCSV出力</button>
           <button id="yearCsvBtn" class="btn">選択年度をCSV出力</button>
           <button id="shareBtn" class="btn">メールで送る</button>
+          <button id="yearShareBtn" class="btn">年度CSVをメールで送る</button>
         </div>
 
         <table>
@@ -701,6 +702,7 @@
       csvBtn: document.getElementById("csvBtn"),
       yearCsvBtn: document.getElementById("yearCsvBtn"),
       shareBtn: document.getElementById("shareBtn"),
+      yearShareBtn: document.getElementById("yearShareBtn"),
       resetMembersBtn: document.getElementById("resetMembersBtn"),
       emailInput: document.getElementById("emailInput"),
       settingsMembers: document.getElementById("settingsMembers"),
@@ -747,6 +749,7 @@
       els.csvBtn.addEventListener("click", exportMonthlyCsv);
       els.yearCsvBtn.addEventListener("click", exportFiscalYearCsv);
       els.shareBtn.addEventListener("click", shareMonthlyXlsx);
+      els.yearShareBtn.addEventListener("click", shareFiscalYearCsv);
       els.resetMembersBtn.addEventListener("click", resetMembers);
       els.monthPicker.addEventListener("change", () => {
         state.ui.month = els.monthPicker.value;
@@ -1103,6 +1106,12 @@
     }
 
     function exportFiscalYearCsv() {
+      const { fiscalYear, blob } = buildFiscalYearCsvBlob();
+      downloadBlob(blob, `PMS006-${fiscalYear}年度.csv`);
+      toast("年度CSVを出力しました");
+    }
+
+    function buildFiscalYearCsvBlob() {
       const [selectedYear, selectedMonth] = els.monthPicker.value.split("-").map(Number);
       const fiscalYear = selectedMonth <= 3 ? selectedYear - 1 : selectedYear;
       const lines = [
@@ -1120,8 +1129,7 @@
         ["\uFEFF", lines.join("\r\n")],
         { type: "text/csv;charset=utf-8" }
       );
-      downloadBlob(blob, `PMS006-${fiscalYear}年度.csv`);
-      toast("年度CSVを出力しました");
+      return { fiscalYear, blob };
     }
 
     function appendCsvMonthLines(lines, year, month) {
@@ -1178,6 +1186,36 @@
       downloadBlob(blob, filename);
       openMailDraft(filename, recipient);
       toast("Excelを保存し、メール作成を開きました");
+    }
+
+    async function shareFiscalYearCsv() {
+      const { fiscalYear, blob } = buildFiscalYearCsvBlob();
+      const filename = `PMS006-${fiscalYear}年度.csv`;
+      const recipient = (state.ui.email || "").trim();
+
+      if (typeof File !== "undefined" && navigator.share && typeof navigator.canShare === "function") {
+        const file = new File([blob], filename, {
+          type: "text/csv;charset=utf-8"
+        });
+
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: filename,
+              text: recipient ? `送付先: ${recipient}` : "",
+              files: [file]
+            });
+            toast("共有画面を開きました");
+            return;
+          } catch {
+            return;
+          }
+        }
+      }
+
+      downloadBlob(blob, filename);
+      openMailDraft(filename, recipient);
+      toast("CSVを保存し、メール作成を開きました");
     }
 
     function openMailDraft(filename, recipient) {
