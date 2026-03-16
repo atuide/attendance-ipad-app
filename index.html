@@ -79,6 +79,13 @@
       flex-wrap: wrap;
     }
 
+    .hero-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
     h1, h2 {
       margin: 0;
       letter-spacing: 0.02em;
@@ -120,9 +127,8 @@
     }
 
     .mode-note {
-      flex: 1;
-      min-width: 280px;
-      text-align: right;
+      width: 100%;
+      text-align: left;
     }
 
     .seg button, .btn, .member-btn, .tabs button {
@@ -534,9 +540,15 @@
   <main>
     <section class="hero">
       <div class="hero-top">
-        <div>
+        <div class="hero-title">
+          <div>
           <div class="sub">PMS006 月次帳票対応</div>
           <h1>入退室記録</h1>
+          </div>
+          <div class="seg" aria-label="mode">
+            <button id="modeIn" class="active in">入室</button>
+            <button id="modeOut" class="out">退室</button>
+          </div>
         </div>
         <div class="clock">
           <div id="todayLabel" class="sub"></div>
@@ -545,10 +557,6 @@
       </div>
 
       <div class="row">
-        <div class="seg" aria-label="mode">
-          <button id="modeIn" class="active in">入室</button>
-          <button id="modeOut" class="out">退室</button>
-        </div>
         <div class="note mode-note">
           0:00-11:59は入室、12:00-23:59は退室に自動切替します。
         </div>
