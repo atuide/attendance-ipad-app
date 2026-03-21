@@ -21,6 +21,8 @@
       --out: #b42318;
       --chip: #efe5d2;
       --shadow: 0 16px 36px rgba(27, 36, 48, 0.08);
+      --burn-x: 0px;
+      --burn-y: 0px;
     }
 
     * { box-sizing: border-box; }
@@ -29,6 +31,7 @@
       margin: 0;
       color: var(--ink);
       font: 16px/1.45 "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      overflow-x: hidden;
       background:
         radial-gradient(circle at top left, rgba(213, 121, 72, 0.15), transparent 22%),
         radial-gradient(circle at bottom right, rgba(15, 76, 92, 0.14), transparent 24%),
@@ -54,6 +57,9 @@
       width: min(1080px, 100%);
       margin: 0 auto;
       padding: 18px 18px 48px;
+      transform: translate(var(--burn-x), var(--burn-y));
+      transition: transform 900ms ease;
+      will-change: transform;
     }
 
     .hero, .panel {
@@ -723,6 +729,20 @@
     };
 
     let toastTimer = null;
+    let burnShiftIndex = 0;
+    let burnShiftTimer = null;
+
+    const burnShiftPattern = [
+      [0, 0],
+      [2, 0],
+      [2, 2],
+      [0, 2],
+      [-2, 2],
+      [-2, 0],
+      [-2, -2],
+      [0, -2],
+      [2, -2]
+    ];
 
     init();
 
@@ -739,8 +759,24 @@
       bindEvents();
       tickClock();
       setInterval(tickClock, 1000);
+      startBurnShift();
       switchTab(state.ui.tab || "record");
       renderAll();
+    }
+
+    function startBurnShift() {
+      applyBurnShift();
+      clearInterval(burnShiftTimer);
+      burnShiftTimer = setInterval(() => {
+        burnShiftIndex = (burnShiftIndex + 1) % burnShiftPattern.length;
+        applyBurnShift();
+      }, 90000);
+    }
+
+    function applyBurnShift() {
+      const [x, y] = burnShiftPattern[burnShiftIndex];
+      document.documentElement.style.setProperty("--burn-x", `${x}px`);
+      document.documentElement.style.setProperty("--burn-y", `${y}px`);
     }
 
     function registerServiceWorker() {
